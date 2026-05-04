@@ -9,7 +9,7 @@ import GamesHub from './GamesHub';
 import Home from './Home';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, Clock, User, Heart, MessageCircle } from 'lucide-react';
-import { db, auth } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 
 interface MessengerProps {
@@ -36,17 +36,7 @@ export default function Messenger({ profile, activeTab = 'chat' }: MessengerProp
       setConversations(convs);
       setLoading(false);
     }, (error) => {
-      const errInfo = {
-        error: error.message,
-        operationType: 'list',
-        path: 'conversations',
-        authInfo: {
-          userId: auth.currentUser?.uid,
-          email: auth.currentUser?.email,
-          emailVerified: auth.currentUser?.emailVerified,
-        }
-      };
-      console.error("Messenger snapshot error:", JSON.stringify(errInfo));
+      handleFirestoreError(error, OperationType.LIST, 'conversations');
       setLoading(false);
     });
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Conversation, Message, UserProfile } from '../types';
-import { db, storage } from '../lib/firebase';
+import { db, storage, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
   collection, 
   query, 
@@ -56,6 +56,8 @@ export default function ChatRoom({ conversation, currentUser }: ChatRoomProps) {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
       setMessages(msgs);
       setTimeout(() => scrollRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `conversations/${conversation.id}/messages`);
     });
 
     return () => unsub();
@@ -76,62 +78,82 @@ export default function ChatRoom({ conversation, currentUser }: ChatRoomProps) {
       isUnsent: false
     };
 
-    setInput('');
-    await addDoc(collection(db, 'conversations', conversation.id, 'messages'), msgData);
-    await updateDoc(doc(db, 'conversations', conversation.id), {
-      lastMessage: { text: input, updatedAt: serverTimestamp() },
-      updatedAt: serverTimestamp()
-    });
+    try {
+      setInput('');
+      await addDoc(collection(db, 'conversations', conversation.id, 'messages'), msgData);
+      await updateDoc(doc(db, 'conversations', conversation.id), {
+        lastMessage: { text: input, updatedAt: serverTimestamp() },
+        updatedAt: serverTimestamp()
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `conversations/${conversation.id}/messages`);
+    }
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const storageRef = ref(storage, `chats/${conversation.id}/${Date.now()}_${file.name}`);
-    await uploadBytes(storageRef, file);
-    const url = await getDownloadURL(storageRef);
+    try {
+      const storageRef = ref(storage, `chats/${conversation.id}/${Date.now()}_${file.name}`);
+      await uploadBytes(storageRef, file);
+      const url = await getDownloadURL(storageRef);
 
-    const msgData = {
-      convId: conversation.id,
-      senderId: currentUser.uid,
-      type: file.type.startsWith('image/') ? 'image' : 'file',
-      fileUrl: url,
-      fileName: file.name,
-      readBy: [currentUser.uid],
-      deletedBy: [],
-      createdAt: serverTimestamp(),
-      isUnsent: false
-    };
+      const msgData = {
+        convId: conversation.id,
+        senderId: currentUser.uid,
+        type: file.type.startsWith('image/') ? 'image' : 'file',
+        fileUrl: url,
+        fileName: file.name,
+        readBy: [currentUser.uid],
+        deletedBy: [],
+        createdAt: serverTimestamp(),
+        isUnsent: false
+      };
 
-    await addDoc(collection(db, 'conversations', conversation.id, 'messages'), msgData);
+      await addDoc(collection(db, 'conversations', conversation.id, 'messages'), msgData);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `conversations/${conversation.id}/messages (upload)`);
+    }
   };
 
   const deleteForMe = async (msgId: string) => {
     const msgRef = doc(db, 'conversations', conversation.id, 'messages', msgId);
-    await updateDoc(msgRef, {
-      deletedBy: [...messages.find(m => m.id === msgId)?.deletedBy || [], currentUser.uid]
-    });
+    try {
+      await updateDoc(msgRef, {
+        deletedBy: [...messages.find(m => m.id === msgId)?.deletedBy || [], currentUser.uid]
+      });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `conversations/${conversation.id}/messages/${msgId}`);
+    }
   };
 
   const unsendMessage = async (msgId: string) => {
     const msgRef = doc(db, 'conversations', conversation.id, 'messages', msgId);
-    await updateDoc(msgRef, { isUnsent: true, text: 'This message was unsent' });
+    try {
+      await updateDoc(msgRef, { isUnsent: true, text: 'This message was unsent' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `conversations/${conversation.id}/messages/${msgId}`);
+    }
   };
 
   const handleRequest = async (action: 'accept' | 'block') => {
-    if (action === 'accept') {
-      await updateDoc(doc(db, 'conversations', conversation.id), {
-        'metadata.isRequest': false,
-        'metadata.acceptedAt': serverTimestamp()
-      });
-    } else {
-      // Blocking could mean deleting the conversation or adding to a blocklist
-      // For this demo, we'll just archive it or remove the user from participants
-      await updateDoc(doc(db, 'conversations', conversation.id), {
-        'metadata.isBlocked': true,
-        participants: conversation.participants.filter(id => id !== currentUser.uid)
-      });
+    try {
+      if (action === 'accept') {
+        await updateDoc(doc(db, 'conversations', conversation.id), {
+          'metadata.isRequest': false,
+          'metadata.acceptedAt': serverTimestamp()
+        });
+      } else {
+        // Blocking could mean deleting the conversation or adding to a blocklist
+        // For this demo, we'll just archive it or remove the user from participants
+        await updateDoc(doc(db, 'conversations', conversation.id), {
+          'metadata.isBlocked': true,
+          participants: conversation.participants.filter(id => id !== currentUser.uid)
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `conversations/${conversation.id}`);
     }
   };
 

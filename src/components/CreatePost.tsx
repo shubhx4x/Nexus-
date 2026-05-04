@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Image as ImageIcon, Camera, Smile, Send, Sparkles, MapPin, Music, Type, Wand2 } from 'lucide-react';
 import { UserProfile, MusicMetadata } from '../types';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, limit } from 'firebase/firestore';
 import { cn } from '../lib/utils';
 
@@ -66,7 +66,7 @@ export default function CreatePost({ profile, onClose }: CreatePostProps) {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicMetadata));
         setGlobalMusic(data);
       } catch (e) {
-        console.error("Failed to load global music:", e);
+        handleFirestoreError(e, OperationType.GET, 'music');
       }
     };
     fetchMusic();
@@ -122,7 +122,7 @@ export default function CreatePost({ profile, onClose }: CreatePostProps) {
       setShowAddSong(false);
       setNewSong({ title: '', artist: '', url: '' });
     } catch (e) {
-      console.error("Add song failed:", e);
+      handleFirestoreError(e, OperationType.WRITE, 'music');
     }
   };
 
@@ -159,7 +159,7 @@ export default function CreatePost({ profile, onClose }: CreatePostProps) {
       }
       onClose();
     } catch (error) {
-      console.error('Error creating post:', error);
+      handleFirestoreError(error, OperationType.WRITE, type === 'post' ? 'posts' : 'stories');
     } finally {
       setIsUploading(false);
     }

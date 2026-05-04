@@ -2,7 +2,15 @@ import { GoogleGenAI } from "@google/genai";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
 
+const recommendationCache: Record<string, string[]> = {};
+
 export async function getRecommendations(userProfile: string) {
+  if (!userProfile) return ["Tech Chat", "Gaming", "Photography"];
+  
+  if (recommendationCache[userProfile]) {
+    return recommendationCache[userProfile];
+  }
+
   try {
     const prompt = `Based on this user profile: "${userProfile}", suggest 3 short interests or activities they might like in a social messaging app. Return a JSON array of strings only.`;
     
@@ -15,11 +23,18 @@ export async function getRecommendations(userProfile: string) {
     // Simple parsing for demo
     const matches = text.match(/\[.*\]/s);
     if (matches) {
-       return JSON.parse(matches[0]);
+       const result = JSON.parse(matches[0]);
+       recommendationCache[userProfile] = result;
+       return result;
     }
     return ["Tech Chat", "Gaming", "Photography"];
-  } catch (error) {
-    console.error("Gemini Error:", error);
+  } catch (error: any) {
+    // If it's a 429, we don't want to spam the console with the full JSON if it's already known
+    if (error?.message?.includes('429') || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+      console.warn("Gemini Quota Exceeded. Using default recommendations.");
+    } else {
+      console.error("Gemini Error:", error);
+    }
     return ["Networking", "Daily News", "Music Sharing"];
   }
 }

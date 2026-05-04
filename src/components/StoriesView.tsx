@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, where, onSnapshot, orderBy, doc, updateDoc, increment } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -49,7 +49,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
       setStories(storiesData);
       setLoading(false);
     }, (error) => {
-      console.error("Stories snapshot error:", error);
+      handleFirestoreError(error, OperationType.LIST, 'stories');
       setLoading(false);
     });
 
@@ -60,9 +60,9 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
     // In a real app, stories might have a likes count or send a notification/DM
     if (action === 'like') {
        // Placeholder for story like - could use a separate reactions collection
-       alert('Moment resonance detected! (Liked)');
+       console.log('Moment resonance detected! (Liked)');
     } else if (action === 'reply' && replyText.trim()) {
-       alert(`Transmitting reply to neural link: ${replyText}`);
+       console.log(`Transmitting reply to neural link: ${replyText}`);
        setReplyText('');
     }
   };
@@ -70,7 +70,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
   const handleShareStory = (story: Story) => {
     const url = window.location.href;
     navigator.clipboard.writeText(`${url}?story=${story.id}`);
-    alert('Moment link copied to neural buffer!');
+    console.log('Moment link copied to neural buffer!');
   };
 
   return (

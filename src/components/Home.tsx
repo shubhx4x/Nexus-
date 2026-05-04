@@ -7,7 +7,7 @@ import { ShieldCheck, Sparkles, TrendingUp, Users, Search, X, Heart, MessageCirc
 import GlobalSearch from './GlobalSearch';
 import UserProfileView from './UserProfileView';
 import CommentModal from './CommentModal';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc, increment } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '../lib/utils';
@@ -35,6 +35,9 @@ export default function Home({ profile }: { profile: UserProfile }) {
       })) as Post[];
       setPosts(postsData);
       setLoadingPosts(false);
+    }, (err) => {
+      handleFirestoreError(err, OperationType.LIST, 'posts');
+      setLoadingPosts(false);
     });
     return () => unsubscribe();
   }, []);
@@ -45,7 +48,7 @@ export default function Home({ profile }: { profile: UserProfile }) {
         likesCount: increment(1)
       });
     } catch (error) {
-      console.error('Error liking post:', error);
+      handleFirestoreError(error, OperationType.UPDATE, `posts/${postId}`);
     }
   };
 
@@ -53,7 +56,7 @@ export default function Home({ profile }: { profile: UserProfile }) {
     const url = window.location.href;
     const shareUrl = `${url.split('?')[0]}?post=${post.id}`;
     navigator.clipboard.writeText(shareUrl);
-    alert('Transmission link copied to neural buffer!');
+    console.log('Transmission link copied to neural buffer!');
   };
 
   if (viewingProfileId) {
@@ -127,10 +130,16 @@ export default function Home({ profile }: { profile: UserProfile }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-           <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
-              <Sparkles className="w-5 h-5 text-indigo-400" />
-              Feed Transmissions
-           </h2>
+           <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black uppercase tracking-tighter flex items-center gap-3">
+                 <Sparkles className="w-5 h-5 text-indigo-400" />
+                 Feed for you
+              </h2>
+              <div className="flex bg-zinc-900/50 p-1 rounded-xl border border-zinc-800">
+                 <button className="px-3 py-1 text-[10px] font-black uppercase tracking-widest bg-indigo-600 rounded-lg text-white">Discovery</button>
+                 <button className="px-3 py-1 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-colors">Following</button>
+              </div>
+           </div>
 
            {loadingPosts ? (
              <div className="space-y-6">

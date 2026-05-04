@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Send, Clock } from 'lucide-react';
 import { UserProfile, Post, PostComment } from '../types';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
   collection, 
   addDoc, 
@@ -38,6 +38,8 @@ export default function CommentModal({ post, profile, onClose }: CommentModalPro
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate()?.toISOString() || new Date().toISOString()
       })) as PostComment[]);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, `posts/${post.id}/comments`);
     });
     return () => unsubscribe();
   }, [post.id]);
@@ -58,7 +60,7 @@ export default function CommentModal({ post, profile, onClose }: CommentModalPro
       });
       setNewComment('');
     } catch (error) {
-      console.error('Error adding comment:', error);
+      handleFirestoreError(error, OperationType.WRITE, `posts/${post.id}/comments`);
     } finally {
       setIsSubmitting(false);
     }

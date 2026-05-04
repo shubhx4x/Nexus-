@@ -26,7 +26,7 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow create: if isSignedIn() && (request.resource.data.role != 'developer' || request.auth.token.email == 'gamechangers4200@gmail.com' || request.auth.token.email == 'developer@nexus.app');
       allow update: if isOwner(userId) && (
-        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'themeColor', 'isPrivate', 'dndMode', 'status', 'lastSeen', 'updatedAt'])
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL', 'bio', 'themeColor', 'interfaceMode', 'isPrivate', 'dndMode', 'status', 'lastSeen', 'updatedAt'])
       ) || isAdmin();
     }
 

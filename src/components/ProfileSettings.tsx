@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserProfile } from '../types';
-import { db, storage, auth } from '../lib/firebase';
+import { db, storage, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
@@ -64,9 +64,9 @@ export default function ProfileSettings({ profile }: ProfileSettingsProps) {
         dndMode: isDnd,
         updatedAt: serverTimestamp()
       });
-      alert('Profile updated!');
+      console.log('Profile updated');
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.UPDATE, `users/${profile.uid}`);
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ export default function ProfileSettings({ profile }: ProfileSettingsProps) {
         updatedAt: serverTimestamp()
       });
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.UPDATE, `users/${profile.uid} (avatar)`);
     } finally {
       setUploading(false);
     }

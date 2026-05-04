@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { db } from '../lib/firebase';
+import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
   collection, 
   query, 
@@ -42,7 +42,7 @@ export default function GlobalSearch({ currentUser, onSelectChat, onSelectUser }
         .filter(u => u.uid !== currentUser.uid);
       setResults(users);
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.LIST, 'users (search)');
     } finally {
       setSearching(false);
     }
@@ -51,37 +51,46 @@ export default function GlobalSearch({ currentUser, onSelectChat, onSelectUser }
   const startChat = async (user: UserProfile) => {
     const convId = [currentUser.uid, user.uid].sort().join('_');
     const convRef = doc(db, 'conversations', convId);
-    const convSnap = await getDoc(convRef);
+    
+    try {
+      const convSnap = await getDoc(convRef);
 
-    if (!convSnap.exists()) {
-      const newConv: Partial<Conversation> = {
-        id: convId,
-        participants: [currentUser.uid, user.uid],
-        type: 'direct',
-        updatedAt: new Date().toISOString(),
-        metadata: {
-          name: user.displayName,
-          icon: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`
-        }
-      };
-      await setDoc(convRef, newConv);
-      onSelectChat(newConv as Conversation);
-    } else {
-      onSelectChat(convSnap.data() as Conversation);
+      if (!convSnap.exists()) {
+        const newConv: Partial<Conversation> = {
+          id: convId,
+          participants: [currentUser.uid, user.uid],
+          type: 'direct',
+          updatedAt: new Date().toISOString(),
+          metadata: {
+            name: user.displayName,
+            icon: user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`
+          }
+        };
+        await setDoc(convRef, newConv);
+        onSelectChat(newConv as Conversation);
+      } else {
+        onSelectChat(convSnap.data() as Conversation);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.GET, `conversations/${convId}`);
     }
   };
 
   const sendRequest = async (user: UserProfile) => {
     const requestId = `${currentUser.uid}_${user.uid}`;
-    await setDoc(doc(db, 'requests', requestId), {
-      id: requestId,
-      fromId: currentUser.uid,
-      toId: user.uid,
-      status: 'pending',
-      type: 'follow',
-      createdAt: serverTimestamp()
-    });
-    alert('Follow request sent!');
+    try {
+      await setDoc(doc(db, 'requests', requestId), {
+        id: requestId,
+        fromId: currentUser.uid,
+        toId: user.uid,
+        status: 'pending',
+        type: 'follow',
+        createdAt: serverTimestamp()
+      });
+      console.log('Follow request sent!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `requests/${requestId}`);
+    }
   };
 
   return (
@@ -98,7 +107,7 @@ export default function GlobalSearch({ currentUser, onSelectChat, onSelectUser }
           type="text"
           value={queryStr}
           onChange={(e) => setQueryStr(e.target.value)}
-          placeholder="Search by username (e.g. johndoe)"
+          placeholder="Search user..."
           className="w-full bg-zinc-900/50 border border-zinc-800 rounded-3xl pl-16 pr-6 py-5 text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all shadow-2xl"
         />
       </form>

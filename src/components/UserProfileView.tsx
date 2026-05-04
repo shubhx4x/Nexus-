@@ -18,7 +18,7 @@ import {
   X,
   Music
 } from 'lucide-react';
-import { db, auth } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { 
   collection, 
   query, 
@@ -58,9 +58,13 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
   useEffect(() => {
     // Fetch profile data
     const fetchProfile = async () => {
-      const docSnap = await getDoc(doc(db, 'users', userId));
-      if (docSnap.exists()) {
-        setProfile(docSnap.data() as UserProfile);
+      try {
+        const docSnap = await getDoc(doc(db, 'users', userId));
+        if (docSnap.exists()) {
+          setProfile(docSnap.data() as UserProfile);
+        }
+      } catch (error) {
+        handleFirestoreError(error, OperationType.GET, `users/${userId}`);
       }
     };
     fetchProfile();
@@ -74,6 +78,9 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
     const unsubPosts = onSnapshot(q, (snapshot) => {
       setPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[]);
       setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'posts');
+      setLoading(false);
     });
 
     // Check for stories
@@ -85,6 +92,8 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
     );
     const unsubStories = onSnapshot(storyQ, (snap) => {
       setHasStory(!snap.empty);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'stories');
     });
 
     // Check if following
@@ -92,6 +101,8 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
       const followRef = doc(db, 'follows', `${currentUser.uid}_${userId}`);
       const unsubFollow = onSnapshot(followRef, (snap) => {
         setIsFollowing(snap.exists());
+      }, (error) => {
+        handleFirestoreError(error, OperationType.GET, `follows/${currentUser.uid}_${userId}`);
       });
       return () => { unsubPosts(); unsubStories(); unsubFollow(); };
     }
@@ -117,7 +128,7 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
         await updateDoc(doc(db, 'users', currentUser.uid), { followingCount: increment(1) });
       }
     } catch (error) {
-      console.error("Follow action failed:", error);
+      handleFirestoreError(error, OperationType.WRITE, `follows/${followId}`);
     }
   };
 
@@ -125,7 +136,7 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
     const url = window.location.href;
     const shareUrl = `${url.split('?')[0]}?profile=${userId}`;
     navigator.clipboard.writeText(shareUrl);
-    alert('Neural profile link copied to buffer!');
+    console.log('Neural profile link copied to buffer!');
   };
 
   const handleLikePost = async (post: Post) => {
@@ -137,7 +148,7 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
          setSelectedPost({ ...selectedPost, likesCount: selectedPost.likesCount + 1 });
       }
     } catch (error) {
-      console.error("Post like failed:", error);
+      handleFirestoreError(error, OperationType.UPDATE, `posts/${post.id}`);
     }
   };
 
@@ -145,7 +156,7 @@ export default function UserProfileView({ userId, currentUser, onBack, onMessage
     const url = window.location.href;
     const shareUrl = `${url.split('?')[0]}?post=${post.id}`;
     navigator.clipboard.writeText(shareUrl);
-    alert('Transmission link copied to neural buffer!');
+    console.log('Transmission link copied to neural buffer!');
   };
 
   if (!profile && loading) return (

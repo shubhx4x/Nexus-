@@ -212,8 +212,8 @@ export default function GamesHub() {
 
       <div className="mb-12 flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold mb-2">Arena</h2>
-          <p className="text-zinc-500">Compete with friends in simple but tricky games</p>
+          <h2 className="text-3xl font-bold mb-2 uppercase tracking-tighter italic">Nexus Discovery</h2>
+          <p className="text-zinc-500 font-medium">Explore trending transmissions and global interactions</p>
         </div>
         <div className="flex gap-4">
            <button 

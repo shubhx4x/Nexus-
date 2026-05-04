@@ -121,7 +121,7 @@ export default function Layout({ children, profile }: LayoutProps) {
   const navItems = [
     { id: 'home', icon: Shield, label: 'Home' },
     { id: 'chat', icon: MessageCircle, label: 'Messages' },
-    { id: 'games', icon: Play, label: 'Arena' },
+    { id: 'games', icon: Sparkles, label: 'Discover' },
     { id: 'profile', icon: User, label: 'Profile' },
   ];
 

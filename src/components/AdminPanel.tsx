@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../lib/firebase';
+import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import { collection, query, getDocs, limit, doc, getDoc, updateDoc, deleteDoc, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import { UserProfile, Conversation, MusicMetadata } from '../types';
 import { 
@@ -28,7 +28,7 @@ function AdminChatMonitor({ conversationId, devUid }: { conversationId: string, 
     const q = query(collection(db, 'conversations', conversationId, 'messages'), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(q, (snap) => {
       setMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (err) => console.error("Monitor error:", err));
+    }, (err) => handleFirestoreError(err, OperationType.GET, `conversations/${conversationId}/messages`));
     return () => unsub();
   }, [conversationId]);
 
@@ -36,17 +36,21 @@ function AdminChatMonitor({ conversationId, devUid }: { conversationId: string, 
     e.preventDefault();
     if (!input.trim()) return;
     
-    await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
-      convId: conversationId,
-      senderId: devUid,
-      text: `[DEV_ADMIN]: ${input}`,
-      type: 'text',
-      readBy: [devUid],
-      deletedBy: [],
-      createdAt: serverTimestamp(),
-      isUnsent: false
-    });
-    setInput('');
+    try {
+      await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
+        convId: conversationId,
+        senderId: devUid,
+        text: `[DEV_ADMIN]: ${input}`,
+        type: 'text',
+        readBy: [devUid],
+        deletedBy: [],
+        createdAt: serverTimestamp(),
+        isUnsent: false
+      });
+      setInput('');
+    } catch (error) {
+       handleFirestoreError(error, OperationType.WRITE, `conversations/${conversationId}/messages (admin)`);
+    }
   };
 
   return (
@@ -115,7 +119,7 @@ export default function AdminPanel() {
         const mSnap = await getDocs(query(collection(db, 'music'), limit(50)));
         setMusic(mSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as MusicMetadata)));
       } catch (err: any) {
-        console.error("Admin fetch error:", err);
+        handleFirestoreError(err, OperationType.GET, 'admin_collections');
         setError(err.message || "Access Denied: You may not have administrative privileges.");
       } finally {
         setLoading(false);
@@ -126,21 +130,33 @@ export default function AdminPanel() {
 
   const deleteUser = async (userId: string) => {
     if (confirm('Are you sure you want to delete this user? This cannot be undone.')) {
-      await deleteDoc(doc(db, 'users', userId));
-      setUsers(users.filter(u => u.uid !== userId));
+      try {
+        await deleteDoc(doc(db, 'users', userId));
+        setUsers(users.filter(u => u.uid !== userId));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `users/${userId}`);
+      }
     }
   };
 
   const toggleVerify = async (user: UserProfile) => {
      const newRole = user.role === 'developer' ? 'user' : 'developer';
-     await updateDoc(doc(db, 'users', user.uid), { role: newRole });
-     setUsers(users.map(u => u.uid === user.uid ? { ...u, role: newRole } : u));
+     try {
+       await updateDoc(doc(db, 'users', user.uid), { role: newRole });
+       setUsers(users.map(u => u.uid === user.uid ? { ...u, role: newRole } : u));
+     } catch (error) {
+       handleFirestoreError(error, OperationType.UPDATE, `users/${user.uid}`);
+     }
   };
 
   const deleteMusic = async (songId: string) => {
     if (confirm('De-list this audio signal from the registry?')) {
-      await deleteDoc(doc(db, 'music', songId));
-      setMusic(music.filter(m => m.id !== songId));
+      try {
+        await deleteDoc(doc(db, 'music', songId));
+        setMusic(music.filter(m => m.id !== songId));
+      } catch (error) {
+        handleFirestoreError(error, OperationType.DELETE, `music/${songId}`);
+      }
     }
   };
 
@@ -153,9 +169,9 @@ export default function AdminPanel() {
         createdAt: serverTimestamp()
       });
       setBroadcast({ message: '', type: 'info' });
-      alert('Broadcast Signal Transmitted.');
+      console.log('Broadcast Signal Transmitted.');
     } catch (err) {
-      console.error(err);
+      handleFirestoreError(err, OperationType.WRITE, 'announcements');
     }
   };
 

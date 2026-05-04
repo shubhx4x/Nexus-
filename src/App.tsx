@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import { auth, db } from './lib/firebase';
+import { auth, db, handleFirestoreError, OperationType } from './lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, onSnapshot, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { UserProfile } from './types';
@@ -70,13 +70,13 @@ export default function App() {
             });
             await setDoc(doc(db, 'usernames', baseUsername), { uid: user.uid });
           } catch (e) {
-            console.error("Auto-profile creation failed:", e);
+            handleFirestoreError(e, OperationType.WRITE, 'users');
           }
           setProfile(null); // Will be picked up by the next snapshot or stays null
         }
         setLoading(false);
       }, (err) => {
-        console.error("Profile fetch error:", err);
+        handleFirestoreError(err, OperationType.GET, `users/${user.uid}`);
         setLoading(false);
       });
 
@@ -84,7 +84,7 @@ export default function App() {
       updateDoc(doc(db, 'users', user.uid), {
         status: 'online',
         lastSeen: new Date().toISOString()
-      }).catch(e => console.warn("Presence update failed:", e));
+      }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
 
       const handleVisibility = () => {
         if (!user?.uid) return;
@@ -92,7 +92,7 @@ export default function App() {
         updateDoc(doc(db, 'users', user.uid), {
           status,
           lastSeen: new Date().toISOString()
-        }).catch(() => {});
+        }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
       };
 
       document.addEventListener('visibilitychange', handleVisibility);
@@ -103,7 +103,7 @@ export default function App() {
            updateDoc(doc(db, 'users', user.uid), {
             status: 'offline',
             lastSeen: new Date().toISOString()
-          }).catch(() => {});
+          }).catch(e => handleFirestoreError(e, OperationType.UPDATE, `users/${user.uid}`));
         }
       };
     }
