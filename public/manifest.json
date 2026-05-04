@@ -1,0 +1,21 @@
+{
+  "name": "Social Network",
+  "short_name": "Social",
+  "description": "The peak of neural social synchronization.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#09090b",
+  "theme_color": "#4f46e5",
+  "icons": [
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=nexus-icon&backgroundColor=4f46e5",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "https://api.dicebear.com/7.x/shapes/svg?seed=nexus-icon&backgroundColor=4f46e5",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

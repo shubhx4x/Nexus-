@@ -1,0 +1,6 @@
+{
+  "name": "Nexus Social",
+  "description": "A hyper-polished real-time social networking platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Real-time Messaging", "Mini-games", "AI Personalization", "Group Chats", "Social Stories"]
+}

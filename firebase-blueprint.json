@@ -1,0 +1,191 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user account details, preferences, and status.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "username": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "themeColor": { "type": "string" },
+        "isPrivate": { "type": "boolean" },
+        "dndMode": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["online", "offline", "away"] },
+        "lastSeen": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "role": { "type": "string", "enum": ["user", "developer"] },
+        "followersCount": { "type": "number" },
+        "followingCount": { "type": "number" }
+      },
+      "required": ["uid", "username", "email", "role"]
+    },
+    "Username": {
+      "title": "Username Mapping",
+      "description": "Ensures username uniqueness by mapping names to UIDs.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" }
+      },
+      "required": ["uid"]
+    },
+    "Conversation": {
+      "title": "Chat Conversation",
+      "description": "Represents a direct or group chat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "participants": { "type": "array", "items": { "type": "string" } },
+        "type": { "type": "string", "enum": ["direct", "group"] },
+        "lastMessage": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "metadata": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "icon": { "type": "string" },
+            "createdBy": { "type": "string" }
+          }
+        }
+      },
+      "required": ["id", "participants", "type", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A single message in a conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "convId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "encryptedContent": { "type": "string" },
+        "type": { "type": "string", "enum": ["text", "image", "file"] },
+        "fileUrl": { "type": "string" },
+        "fileName": { "type": "string" },
+        "readBy": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "isUnsent": { "type": "boolean" },
+        "deletedBy": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "convId", "senderId", "createdAt"]
+    },
+    "Story": {
+      "title": "User Story",
+      "description": "Short-lived visual updates.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string" },
+        "music": { "type": "object" },
+        "filter": { "type": "string" },
+        "fontStyle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "mediaUrl", "createdAt", "expiresAt"]
+    },
+    "Post": {
+      "title": "Social Post",
+      "description": "A user-shared image with caption.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "caption": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "music": { "type": "object" },
+        "filter": { "type": "string" },
+        "fontStyle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "imageUrl", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a post.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "text", "createdAt"]
+    },
+    "Follow": {
+      "title": "Follow Relationship",
+      "description": "Tracks who follows whom.",
+      "type": "object",
+      "properties": {
+        "followerId": { "type": "string" },
+        "followingId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["followerId", "followingId"]
+    },
+    "Request": {
+      "title": "Contact Request",
+      "description": "Requests to message or follow private users.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fromId": { "type": "string" },
+        "toId": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "fromId", "toId", "status"]
+    },
+    "Announcement": {
+      "title": "System Announcement",
+      "description": "Global broadcast messages from developers.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string", "enum": ["info", "warning", "maintenance"] },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["message", "type", "active"]
+    },
+    "MusicMetadata": {
+      "title": "Music Metadata",
+      "description": "Represents a song in the global library.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "artist": { "type": "string" },
+        "url": { "type": "string" },
+        "albumArt": { "type": "string" },
+        "addedBy": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "artist", "url"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles" },
+    "/usernames/{username}": { "schema": "Username", "description": "Unique username check" },
+    "/conversations/{convId}": { "schema": "Conversation", "description": "Chat groups/DMs" },
+    "/conversations/{convId}/messages/{msgId}": { "schema": "Message", "description": "Messages within a conversation" },
+    "/stories/{storyId}": { "schema": "Story", "description": "User stories" },
+    "/posts/{postId}": { "schema": "Post", "description": "User social posts" },
+    "/posts/{postId}/comments/{commentId}": { "schema": "Comment", "description": "Comments on a post" },
+    "/follows/{followId}": { "schema": "Follow", "description": "Follow graph" },
+    "/requests/{requestId}": { "schema": "Request", "description": "Friend/Permission requests" },
+    "/music/{musicId}": { "schema": "MusicMetadata", "description": "Global music registry" },
+    "/announcements/{id}": { "schema": "Announcement", "description": "Global broadcasts" }
+  }
+}
